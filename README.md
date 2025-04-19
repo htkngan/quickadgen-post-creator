@@ -8,7 +8,7 @@ Generate ready-to-post social media promotional content by simply entering a pro
 - Instant post preview
 
 ### Demo
-! [image](https://github.com/user-attachments/assets/f9eb4f41-933c-4f97-a721-27f7dfc5044a)
+![image](https://github.com/user-attachments/assets/f9eb4f41-933c-4f97-a721-27f7dfc5044a)
 =>
 ![image](https://github.com/user-attachments/assets/e211d963-eb5a-4104-abf3-e13820a52993)
 
