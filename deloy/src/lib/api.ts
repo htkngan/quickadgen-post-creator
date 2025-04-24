@@ -2,8 +2,8 @@ interface AdRequest {
   itemCode: string;
   itemName: string;
   description?: string;
-  serviceHours?: any;
-  price?: any
+  serviceHours?: number;
+  price?: number;
 }
 
 export async function generateAd(data: AdRequest) {
