@@ -3,7 +3,7 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 
-const API_URL = 'https://quickadgen-post-creator-3.onrender.com/';
+const API_URL = 'https://quickadgen-post-creator-3.onrender.com';
 
 const checkAPIStatus = async () => {
   try {
