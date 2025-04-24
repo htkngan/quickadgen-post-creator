@@ -2,7 +2,7 @@ from typing import Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from google import genai
+from google.generativeai import Client
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -25,7 +25,7 @@ import os
 # Load environment variables
 load_dotenv()
 
-client_gemini = genai.Client()
+client_gemini = Client()
 client_gpt = OpenAI()
 
 #gpt_model = os.getenv("gpt_model")
