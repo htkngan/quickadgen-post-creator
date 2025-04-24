@@ -45,7 +45,7 @@ app = FastAPI()
 # )
 
 origins = [
-    "https://quickadgen-post-creator-mst7.vercel.app",
+    "https://quickadgen-post-creator-1pm7.vercel.app",
     "http://localhost:3000"  # nếu bạn test local frontend
 ]
 
