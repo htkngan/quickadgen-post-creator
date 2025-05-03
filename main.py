@@ -206,7 +206,7 @@ async def run_gemini_image(item: Item, prompt: str, image_context: ImageContext)
             model="gemini-2.0-flash-exp-image-generation",
             contents=[text_input],
             config=types.GenerateContentConfig(
-            response_modalities=['TEXT','IMAGE']
+            response_modalities=['TEXT','IMAGE'])
         )
         
         if not response or not hasattr(response, 'image'):
