@@ -1,5 +1,5 @@
 from typing import Union
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from google import genai
@@ -12,21 +12,21 @@ import time
 import tiktoken  # Add this import for token counting
 import os
 
-# Construct the idea prompt ads
-        # prompt = f"""
-        # Là một chuyên gia viết quảng cáo, nhiệm vụ của bạn là viết một quảng cáo hoàn chỉnh cho sản phẩm {item.name} để đăng tải ngay lên nền tảng Facebook. 
-        # Với mô tả sản phẩm như sau: {item.description if item.description else "Không có mô tả, sử dụng kiến thức chung về sản phẩm."} 
-        # Giọng điệu phải thuyết phục và phù hợp với {item.target_audience if item.target_audience else "đối tượng khách hàng chung"}. 
-        # Tập trung vào việc thu hút sự chú ý nhanh chóng và truyền tải giá trị chỉ trong vài giây, sử dụng ngôn ngữ nói trực tiếp đến mong muốn và điểm khó khăn của đối tượng. 
-        # Mục tiêu là tạo ra một kết nối có ý nghĩa và thúc đẩy hành động ngay lập tức, cho dù đó là mua hàng, đăng ký hay tìm hiểu thêm về sản phẩm. 
-        # Với yếu tố phong cách viết được yêu cầu là {item.tone}.
-        # """
+from Image_processing import ImageContext, AdGenerator
+from google.genai import types
+import base64
+import io
+from io import BytesIO
+from PIL import Image
+from typing import List, Optional
 
 # Load environment variables
 load_dotenv()
 
 client_gemini = genai.Client()
 client_gpt = OpenAI()
+generator = AdGenerator()
+
 
 #gpt_model = os.getenv("gpt_model")
 gemni_model = "gemini-2.0-flash"
@@ -166,7 +166,7 @@ async def run_gpt(item: Item, gpt_model: str):
             "time": end_time - start_time,
             "error": str(e)
         }
-    
+        
 
 @app.post("/generate-ad")
 async def generate_ad(item: Item):
@@ -194,6 +194,103 @@ async def generate_ad(item: Item):
         },
         status_code=200
     )
+    
+@app.post("/generate-image-service")
+async def generate_image_service(
+        itemCode: str = Form(...),
+        itemName: str = Form(...),
+        serviceHours: Optional[int] = Form(0),
+        description: Optional[str] = Form(None),
+        price: Optional[int] = Form(0),
+        image: Optional[UploadFile | str | None] = Form(None),
+        gen_image: Optional[bool] = Form(False),
+    ):
+    
+    item = Item(
+        itemCode=itemCode,
+        itemName=itemName,
+        serviceHours=serviceHours if serviceHours != 0 else None,
+        description=description,
+        price=price if price != 0 else None
+    )
+
+    logger.info(f"Received request for product: {item.itemName} with gen_image={gen_image}")
+    
+    if gen_image and image is None:
+        raise HTTPException(status_code=400, detail="Image file is required when gen_image is True")
+    # Tạo nội dung quảng cáo
+    results = await asyncio.gather(
+        run_gemini(item)
+    )
+    
+    # Ghi log kết quả văn bản
+    for result in results:
+        if result["status"] == "success":
+            logger.info(f"{result['model']} completed in {result['time']:.3f} seconds")
+        else:
+            logger.error(f"{result['model']} failed: {result.get('error', 'Unknown error')}")
+    
+    # Nếu gen_image=True, kiểm tra ảnh đã được tải lên chưa
+    if gen_image:
+        if not image:
+            logger.warning("Image generation requested but no image uploaded")
+            return JSONResponse(
+                content={
+                    "status": "error",
+                    "message": "Image generation requested but no image uploaded",
+                    "results": results,
+                    "image": None
+                },
+                status_code=400
+            )
+            
+        logger.info("Processing image generation")
+        image_bytes = await image.read()
+
+        try:
+            # Tạo ảnh nền với nội dung quảng cáo và hình ảnh
+            image_context = generator.generate_clean_background(results[0]['ad_content'], image_bytes)            
+            
+            # Chuyển đổi thành base64 để trả về qua API
+            img_io = io.BytesIO()
+            image_context.image.save(img_io, format="PNG")
+            img_base64 = base64.b64encode(img_io.getvalue()).decode("utf-8")
+            
+            image_result = {
+                "status": "success",
+                "image_base64": img_base64
+            }
+            logger.info("Image generation successful")
+            
+        except Exception as e:
+            logger.error(f"Image generation failed: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            image_result = {
+                "status": "failed",
+                "error": str(e)
+            }
+
+        return JSONResponse(
+            content={
+                "status": "success",
+                "results": results,
+                "image": image_result
+            },
+            status_code=200
+        )
+    else:
+        # Chỉ trả về kết quả văn bản quảng cáo
+        logger.info("Text-only ad generation requested")
+        return JSONResponse(
+            content={
+                "status": "success",
+                "results": results,
+                "image": None
+            },
+            status_code=200
+        )
 
 # Example endpoint to retrieve item (for testing)
 @app.get("/items/{item_id}")
