@@ -15,6 +15,9 @@ import os
 from Image_processing import ImageContext, AdGenerator
 import re
 from google.genai import types
+import base64
+from io import BytesIO
+from PIL import Image
 
 # Load environment variables
 load_dotenv()
@@ -201,31 +204,35 @@ async def run_gemini_image(item: Item, prompt: str, image_context: ImageContext)
                 style photographic, modern, impressive, creative
         """
         logger.info(f"Attempting to generate image for Gemini with product: {item.itemName}")
-        response = await asyncio.to_thread(
-            client_gemini.models.generate_image,
+        response_image = client_gemini.models.generate_content(
             model="gemini-2.0-flash-exp-image-generation",
             contents=[text_input],
             config=types.GenerateContentConfig(
-            response_modalities=['TEXT','IMAGE'])
+                response_modalities=['TEXT','IMAGE']
+            )
         )
-        
-        if not response or not hasattr(response, 'image'):
-            logger.error(f"Invalid response from Gemini: {response}")
-            return {"model": gemni_model, "status": "error", "ad_content": None, "time": 0, "error": "Invalid response format"}
-        
-        formatted_text = response.image.strip()
-        token_count = count_tokens(formatted_text)
+        text_result = None
+        image_base64 = None
+        for part in response_image.candidates[0].content.parts:
+            if hasattr(part, 'text') and part.text is not None:
+                text_result = part.text
+            elif hasattr(part, 'inline_data') and part.inline_data is not None:
+                # Convert image bytes to base64 string
+                image_bytes = part.inline_data.data
+                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
         end_time = time.time()
-        logger.info(f"Successfully generated Gemini image of length: {len(formatted_text)}")
-        
-        return {
-            "model": gemni_model,
-            "status": "success",
-            "ad_content": formatted_text,
-            "total_tokens": token_count,
-            "time": end_time - start_time
-        }
-    
+        if image_base64:
+            logger.info(f"Successfully generated Gemini image for {item.itemName}")
+            return {
+                "model": gemni_model,
+                "status": "success",
+                "ad_content": text_result,
+                "image_base64": image_base64,
+                "time": end_time - start_time
+            }
+        else:
+            logger.error("No image generated in Gemini response.")
+            return {"model": gemni_model, "status": "error", "ad_content": text_result, "image_base64": None, "time": end_time - start_time, "error": "No image generated"}
     except Exception as e:
         end_time = time.time()
         logger.error(f"Gemini error: {str(e)}")
@@ -233,6 +240,7 @@ async def run_gemini_image(item: Item, prompt: str, image_context: ImageContext)
             "model": gemni_model,
             "status": "error",
             "ad_content": None,
+            "image_base64": None,
             "time": end_time - start_time,
             "error": str(e)
         }
@@ -264,6 +272,36 @@ async def generate_ad(item: Item):
         },
         status_code=200
     )
+    
+@app.post("/generate-image-service")
+async def generate_image_service(item: Item, ad_text: str, image_context: Union[str, None] = None):
+    """
+    Generate an ad image using Gemini based on product info, ad text, and optional image template/context.
+    """
+    logger.info(f"Received image generation request for product: {item.itemName}")
+    # Prepare image context object if provided
+    img_ctx = None
+    if image_context:
+        try:
+            img_ctx = ImageContext(image_context)
+        except Exception as e:
+            logger.error(f"Invalid image context: {str(e)}")
+            return JSONResponse(content={"status": "error", "error": "Invalid image context"}, status_code=400)
+    else:
+        img_ctx = ImageContext("")
+    # Prepare a prompt object for compatibility
+    class Prompt:
+        def __init__(self, text):
+            self.text = text
+    prompt_obj = Prompt(ad_text)
+    # Call Gemini image generation
+    result = await run_gemini_image(item, prompt_obj, img_ctx)
+    if result["status"] == "success":
+        logger.info(f"Image generated successfully for {item.itemName}")
+        return JSONResponse(content={"status": "success", "result": result}, status_code=200)
+    else:
+        logger.error(f"Image generation failed: {result.get('error', 'Unknown error')}")
+        return JSONResponse(content={"status": "error", "result": result}, status_code=500)
 
 # Example endpoint to retrieve item (for testing)
 @app.get("/items/{item_id}")
