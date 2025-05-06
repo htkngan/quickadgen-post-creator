@@ -495,20 +495,3 @@ class AdGenerator:
         # Save final image
         bg_image.save(output_path, "PNG")
         return output_path
-    
-if __name__ == "__main__":
-    # Example usage
-    ad_gen = AdGenerator()
-    ad_context = "✨ THƯ GIÃN ĐỈNH CAO – SPA 5 BUỔI CHỈ 12 GIỜ ✨\n\nBạn đang mệt mỏi, căng thẳng vì công việc và cuộc sống hàng ngày? Cơ thể và làn da đang kêu cứu cần được chăm sóc ngay?\n\n🌿 Gói Spa 5 Buổi – 12 Giờ Dịch Vụ Chuyên Nghiệp 🌿  \n- Thư giãn hoàn toàn, xóa tan mọi áp lực  \n- Tái tạo năng lượng, làm mới làn da rạng rỡ  \n- Dịch vụ tận tâm, môi trường chuẩn 5 sao\n\nĐừng để stress và mệt mỏi chi phối cuộc sống! Hãy để chúng tôi đồng hành cùng bạn trong hành trình chăm sóc sức khỏe và nhan sắc.\n\n🎁 ƯU ĐÃI ĐẶC BIỆT: Giá hấp dẫn, cam kết mang lại trải nghiệm đẳng cấp!\n\n👉 Đăng ký ngay hôm nay để nhận tư vấn MIỄN PHÍ và lịch dịch vụ linh hoạt!  \nNhanh tay nhắn tin cho chúng tôi hoặc gọi ngay hotline: [Số điện thoại]\n\n✨ Spa cho bạn – Sức khỏe và Sắc đẹp mỗi ngày! ✨\n\n#Spa #ThưGiãn #ChămSócDa #KhỏeĐẹp #Spa5Buổi"
-    image_path = r"D:\Bado\Bado_Care\text_ads_genAI\quickadgen-post-creator\fastapi\api\temp_result_cerave_3.png"
-    image = Image.open(image_path)
-    img_byte_arr = io.BytesIO()
-    image_format = image.format or 'PNG'  # Sử dụng định dạng gốc hoặc mặc định là PNG
-    image.save(img_byte_arr, format=image_format)
-    image_bytes = img_byte_arr.getvalue()
-    
-    # Generate background for product
-    bg_image = ad_gen.generate_clean_background(ad_context, image_bytes)
-    bg_image.save_to_path("./background2.png")
-
-
