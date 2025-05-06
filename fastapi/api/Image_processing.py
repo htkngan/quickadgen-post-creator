@@ -256,78 +256,39 @@ class AdGenerator:
 
     def detect_bad_words(self, image_context: ImageContext):
         """
-        Detects text in an image and generates a mask
-        
-        Args:
-            image_context: ImageContext object containing the image
-            
-        Returns:
-            tuple: (mask_image_array, has_text_detected)
-        """
-        # Convert PIL image to OpenCV format for processing
+    Detects text in an image and generates a mask (không dùng file tạm)
+    """
         if image_context.image is None:
             raise ValueError("ImageContext does not contain an image")
-            
-        # Convert PIL image to numpy array for OpenCV
-        img_array = np.array(image_context.image.convert('RGB'))
-        # Convert RGB to BGR (OpenCV format)
-        img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-        
-        # Create a temporary buffer for OCR processing
-        img_bytes = io.BytesIO()
-        image_context.image.save(img_bytes, format="PNG")
-        img_bytes.seek(0)
-        
-        # Process with OCR using in-memory data
-        with open("temp_ocr.png", "wb") as f:
-            f.write(img_bytes.getvalue())
-        
-        result = self.ocr.ocr("temp_ocr.png", cls=True)
-        os.remove("temp_ocr.png")  # Clean up temp file
-        
-        if result is None:
+        img_pil = image_context.image.convert('RGB')
+        img_np = np.array(img_pil)
+        # PaddleOCR nhận numpy array (BGR)
+        img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+        result = self.ocr.ocr(img_bgr, cls=True)
+        if not result:
             return None, False
-
-        # Create mask the same size as the input image
-        mask = np.zeros(img.shape[:2], dtype=np.uint8)
+        mask = np.zeros(img_bgr.shape[:2], dtype=np.uint8)
         text_detected = False
-        
-        # Define expansion margin (in pixels)
         margin = 10
-        
         for line in result:
-            if line is None:
+            if not line:
                 continue
             for word_info in line:
                 text_detected = True
                 points = np.array(word_info[0], dtype=np.int32)
-                
-                # Calculate bounding rectangle with margin
                 x_min = max(0, np.min(points[:, 0]) - margin)
                 y_min = max(0, np.min(points[:, 1]) - margin)
-                x_max = min(img.shape[1], np.max(points[:, 0]) + margin)
-                y_max = min(img.shape[0], np.max(points[:, 1]) + margin)
-                
-                # Create expanded bounding rectangle
+                x_max = min(img_bgr.shape[1], np.max(points[:, 0]) + margin)
+                y_max = min(img_bgr.shape[0], np.max(points[:, 1]) + margin)
                 expanded_rect = np.array([
-                    [x_min, y_min],
-                    [x_max, y_min],
-                    [x_max, y_max],
-                    [x_min, y_max]
+                    [x_min, y_min], [x_max, y_min], [x_max, y_max], [x_min, y_max]
                 ], dtype=np.int32).reshape((-1, 1, 2))
-                
-                # Fill the expanded polygon
                 cv2.fillPoly(mask, [expanded_rect], color=255)
-                
-                # Also fill the original detected polygon
                 original_points = points.reshape((-1, 1, 2))
                 cv2.fillPoly(mask, [original_points], color=255)
-
-        # Apply dilation to further expand the mask
         if text_detected:
             kernel = np.ones((5, 5), np.uint8)
             mask = cv2.dilate(mask, kernel, iterations=1)
-                
         return mask, text_detected
 
     def remove_text(self, image_context: ImageContext):
@@ -349,7 +310,6 @@ class AdGenerator:
         
         # Convert PIL image to numpy array for processing
         img_array = np.array(image_context.image.convert('RGB'))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Configure inpainting model
         config = Config(
@@ -373,7 +333,7 @@ class AdGenerator:
         
         # Convert numpy array back to PIL Image
         cleaned_image = Image.fromarray(result)
-        
+                
         # Return as new ImageContext
         return ImageContext(image=cleaned_image)
 
@@ -391,10 +351,27 @@ class AdGenerator:
         """
         # Generate the initial background
         bg_image = self.generate_background_service(ads_text, image_bytes, model)
-        
-        # Check for text and remove if needed
-        return self.remove_text(bg_image)
-
+        mask, has_text = self.detect_bad_words(bg_image)
+        if not has_text:
+            return bg_image
+        img_array = np.array(bg_image.image.convert('RGB'))
+        config = Config(
+            ldm_steps=20,
+            ldm_sampler=LDMSampler.ddim,
+            hd_strategy=HDStrategy.ORIGINAL,
+            hd_strategy_crop_margin=32,
+            hd_strategy_crop_trigger_size=2048,
+            hd_strategy_resize_limit=2048,
+        )
+        result = self.lama_model(img_array, mask, config)
+        if result.dtype != np.uint8:
+            if np.max(result) <= 1.0:
+                result = (result * 255).astype(np.uint8)
+            else:
+                result = result.astype(np.uint8)
+        cleaned_image = Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+        return ImageContext(image=cleaned_image)
+    
     def add_product_to_background(self, background_path: str, product_path: str, position: str, output_path: str, scale_factor: float = 0.5):
         bg_image = Image.open(background_path).convert("RGBA")
         product_image = Image.open(product_path).convert("RGBA")
@@ -532,6 +509,6 @@ if __name__ == "__main__":
     
     # Generate background for product
     bg_image = ad_gen.generate_clean_background(ad_context, image_bytes)
-    bg_image.save_to_path("./background1.png")
+    bg_image.save_to_path("./background2.png")
 
 
