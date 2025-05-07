@@ -8,6 +8,7 @@ from google.genai import types
 import cv2
 import numpy as np
 import torch
+import tiktoken
 from dotenv import load_dotenv
 
 # Import các module xử lý riêng
@@ -89,32 +90,6 @@ class AdGenerator:
             device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
         self.genai_client = genai.Client()
-
-    def generate_prompt_for_product(self, item: dict) -> str:
-        """Generate a customized prompt for ad background generation based on provided parameters"""
-        prompt = f"Tạo một poster quảng cáo vô cùng cao cấp và sáng tạo để đăng tải lên mạng xã hội facebook hình vuông cho sản phẩm {item['itemName']}, tuyệt đối không hiển thị hình ảnh sản phẩm vào poster quảng cáo vì lí do bảo mật. "
-        
-        # Add description if available
-        if 'description' in item and item['description']:
-            prompt += f" Ảnh quảng cáo nên có chủ đề biểu diễn cho {item['description']}."
-        if 'pattern' in item and item['pattern']:
-            prompt += f" Ảnh quảng cáo cần có các chi tiết như {item['pattern']}. Nếu {item['pattern']} rỗng hãy cho nó phong cách thật high end, elegant, luxury, minimalist"
-        return prompt
-
-    def generate_background_product(self, item: dict, model: str = "gemini-2.0-flash-exp-image-generation") -> ImageContext:
-        prompt = self.generate_prompt(item)
-        response_image = self.genai_client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=['TEXT', 'IMAGE']
-            )
-        )
-        for part in response_image.candidates[0].content.parts:
-            if part.inline_data is not None:
-                image = Image.open(io.BytesIO(part.inline_data.data))
-                return ImageContext(image=image)
-        raise ValueError("No image returned from GenAI")
     
     @staticmethod
     def clean_text(text):
@@ -147,117 +122,82 @@ class AdGenerator:
         text = punctuation_pattern.sub('', text)
 
         return text.strip()
+    
+    #Set up two LLM clients
+    def count_tokens(self, text: str, has_image: bool = False) -> int:
+        """Count the number of tokens in a text string and optional image."""
+        try:
+            encoding = tiktoken.encoding_for_model("gemini-2.0-flash-exp-image-generation")
+            text_tokens = len(encoding.encode(text))
+            # Based on Gemini documentation, images typically use ~258 tokens
+            image_tokens = 258 if has_image else 0
+            return text_tokens + image_tokens
+        except Exception as e:
+            print(f"Token counting error: {e}")
+            # Return an estimate if encoding fails
+            return len(text.split()) + (258 if has_image else 0)
 
-
-    def generate_background_service(self, ads_text: str, image_bytes: bytes | None, model: str = "gemini-2.0-flash-exp-image-generation") -> ImageContext:
+    def generate_background_service(self, itemName: str, ads_text: str, image_bytes: bytes | None, model: str = "gemini-2.0-flash-exp-image-generation") -> ImageContext:
         if image_bytes:
             img = PIL.Image.open(io.BytesIO(image_bytes))
             prompt = (
-                f'generate a poster for a advertise {self.clean_text(ads_text)} with the style like {img} but more creative. '
+                f'Create a background to advertise a product in facebook: {itemName} with the content is {self.clean_text(ads_text)} with the style like {img} but more creative. '
                 'The poster should have a creative pattern, vivid images, and be high quality, 16:9 ratio, '
                 'style photographic, modern, impressive, creative.'
             )
+            # Calculate tokens before API call
+            token_count = self.count_tokens(prompt, has_image=True)
+            print(f"Token count for request with image: {token_count}")
+            
+            response_image = self.genai_client.models.generate_content(
+            model=model,
+            contents=(prompt, img),
+            config=types.GenerateContentConfig(
+                    response_modalities=['TEXT', 'IMAGE']
+                )
+            )
+            
+            # You can also get usage metrics from the response if available
+            if hasattr(response_image, 'usage_metadata'):
+                print(f"Actual token usage: {response_image.usage_metadata}")
+                
+            for part in response_image.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    image = Image.open(io.BytesIO(part.inline_data.data))
+                    return ImageContext(image=image)
+            raise ValueError("No image returned from GenAI")
         else:
             prompt = (
-                f'generate a poster for a advertise {self.clean_text(ads_text)}. '
+                f'Create a background to advertise a product in facebook:{itemName} with the content is {self.clean_text(ads_text)}. '
                 'The poster should have a creative pattern, vivid images, and be high quality, 16:9 ratio, '
                 'style photographic, modern, impressive, creative.'
             )
-
-        response_image = self.genai_client.models.generate_content(
+            # Calculate tokens for text-only prompt
+            token_count = self.count_tokens(prompt)
+            print(f"Token count for text-only request: {token_count}")
+            
+            response_image = self.genai_client.models.generate_content(
             model=model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_modalities=['TEXT', 'IMAGE']
+                )
             )
-        )
-        for part in response_image.candidates[0].content.parts:
-            if part.inline_data is not None:
-                image = Image.open(io.BytesIO(part.inline_data.data))
-                return ImageContext(image=image)
-        raise ValueError("No image returned from GenAI")
-
-
-    # def detect_bad_words(self, image_path: str, mask_output_path: str):
-    #     img = cv2.imread(image_path)
-    #     result = self.ocr.ocr(image_path, cls=True)
-    #     if result is None:
-    #        return mask_output_path, False
-
-    #     mask = np.zeros(img.shape[:2], dtype=np.uint8)
-    #     text_detected = False
-        
-    #     # Define expansion margin (in pixels)
-    #     margin = 10  # Increase this value if text still isn't fully covered
-        
-    #     for line in result:
-    #         if line is None:
-    #             continue
-    #         for word_info in line:
-    #             text_detected = True
-    #             points = np.array(word_info[0], dtype=np.int32)
+            
+            # Track usage metrics if available
+            if hasattr(response_image, 'usage_metadata'):
+                print(f"Actual token usage: {response_image.usage_metadata}")
                 
-    #             # Calculate bounding rectangle
-    #             x_min = max(0, np.min(points[:, 0]) - margin)
-    #             y_min = max(0, np.min(points[:, 1]) - margin)
-    #             x_max = min(img.shape[1], np.max(points[:, 0]) + margin)
-    #             y_max = min(img.shape[0], np.max(points[:, 1]) + margin)
-                
-    #             # Create expanded bounding rectangle
-    #             expanded_rect = np.array([
-    #                 [x_min, y_min],
-    #                 [x_max, y_min],
-    #                 [x_max, y_max],
-    #                 [x_min, y_max]
-    #             ], dtype=np.int32).reshape((-1, 1, 2))
-                
-    #             # Fill the expanded polygon
-    #             cv2.fillPoly(mask, [expanded_rect], color=255)
-                
-    #             # Also fill the original detected polygon for better coverage
-    #             original_points = points.reshape((-1, 1, 2))
-    #             cv2.fillPoly(mask, [original_points], color=255)
-
-    #     # Optional: Apply dilation to further expand the mask
-    #     kernel = np.ones((5, 5), np.uint8)
-    #     mask = cv2.dilate(mask, kernel, iterations=1)
-                
-    #     cv2.imwrite(mask_output_path, mask)
-    #     return mask_output_path, text_detected
-
-    # def remove_text(self, image_path: str, mask_path: str, output_path: str):
-    #     image = cv2.imread(image_path)
-    #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    #     mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-
-    #     if mask.shape[:2] != image.shape[:2]:
-    #         mask = cv2.resize(mask, (image.shape[1], image.shape[0]))
-
-    #     config = Config(
-    #         ldm_steps=20,
-    #         ldm_sampler=LDMSampler.ddim,
-    #         hd_strategy=HDStrategy.ORIGINAL,
-    #         hd_strategy_crop_margin=32,
-    #         hd_strategy_crop_trigger_size=2048,
-    #         hd_strategy_resize_limit=2048,
-    #     )
-
-    #     result = self.lama_model(image, mask, config)
-
-    #     if result.dtype != np.uint8:
-    #         if np.max(result) <= 1.0:
-    #             result = (result * 255).astype(np.uint8)
-    #         else:
-    #             result = result.astype(np.uint8)
-                
-    #     cv2.imwrite(output_path, result)
-
-    #     return output_path
+            for part in response_image.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    image = Image.open(io.BytesIO(part.inline_data.data))
+                    return ImageContext(image=image)
+            raise ValueError("No image returned from GenAI")
 
     def detect_bad_words(self, image_context: ImageContext):
         """
-    Detects text in an image and generates a mask (không dùng file tạm)
-    """
+        Detects text in an image and generates a mask (không dùng file tạm)
+        """
         if image_context.image is None:
             raise ValueError("ImageContext does not contain an image")
         img_pil = image_context.image.convert('RGB')
@@ -291,27 +231,16 @@ class AdGenerator:
             mask = cv2.dilate(mask, kernel, iterations=1)
         return mask, text_detected
 
-    def remove_text(self, image_context: ImageContext):
+    def generate_clean_background(self, image_context: ImageContext):
         """
-        Removes text from an image
-        
-        Args:
-            image_context: ImageContext object containing the image
-            
-        Returns:
-            ImageContext: New object with text removed
+        Nhận vào một ImageContext (ảnh đã có text), trả về ImageContext đã xóa text.
         """
-        # Detect text in the image
+        if not isinstance(image_context, ImageContext):
+            raise TypeError("Input must be an ImageContext")
         mask, has_text = self.detect_bad_words(image_context)
-        
         if not has_text:
-            # No text detected, return the original image
             return image_context
-        
-        # Convert PIL image to numpy array for processing
         img_array = np.array(image_context.image.convert('RGB'))
-        
-        # Configure inpainting model
         config = Config(
             ldm_steps=20,
             ldm_sampler=LDMSampler.ddim,
@@ -320,50 +249,10 @@ class AdGenerator:
             hd_strategy_crop_trigger_size=2048,
             hd_strategy_resize_limit=2048,
         )
-
-        # Process image with inpainting
+        import time
+        print(time.time())
         result = self.lama_model(img_array, mask, config)
-
-        # Normalize result if needed
-        if result.dtype != np.uint8:
-            if np.max(result) <= 1.0:
-                result = (result * 255).astype(np.uint8)
-            else:
-                result = result.astype(np.uint8)
-        
-        # Convert numpy array back to PIL Image
-        cleaned_image = Image.fromarray(result)
-                
-        # Return as new ImageContext
-        return ImageContext(image=cleaned_image)
-
-    def generate_clean_background(self, ads_text: str, image_bytes: bytes | None, model: str = "gemini-2.0-flash-exp-image-generation") -> ImageContext:
-        """
-        Generate a background image for ad and remove any unwanted text
-        
-        Args:
-            ads_text: Text for the advertisement
-            image_bytes: Optional image bytes to influence style
-            model: The GenAI model to use
-            
-        Returns:
-            ImageContext: Clean background image ready for use
-        """
-        # Generate the initial background
-        bg_image = self.generate_background_service(ads_text, image_bytes, model)
-        mask, has_text = self.detect_bad_words(bg_image)
-        if not has_text:
-            return bg_image
-        img_array = np.array(bg_image.image.convert('RGB'))
-        config = Config(
-            ldm_steps=20,
-            ldm_sampler=LDMSampler.ddim,
-            hd_strategy=HDStrategy.ORIGINAL,
-            hd_strategy_crop_margin=32,
-            hd_strategy_crop_trigger_size=2048,
-            hd_strategy_resize_limit=2048,
-        )
-        result = self.lama_model(img_array, mask, config)
+        print(time.time())
         if result.dtype != np.uint8:
             if np.max(result) <= 1.0:
                 result = (result * 255).astype(np.uint8)
@@ -371,91 +260,129 @@ class AdGenerator:
                 result = result.astype(np.uint8)
         cleaned_image = Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
         return ImageContext(image=cleaned_image)
-    
-    def add_product_to_background(self, background_path: str, product_path: str, position: str, output_path: str, scale_factor: float = 0.5):
-        bg_image = Image.open(background_path).convert("RGBA")
-        product_image = Image.open(product_path).convert("RGBA")
 
-        # Resize product image theo background giữ nguyên tỷ lệ ảnh gốc
-        # Sản phẩm sẽ chiếm khoảng 1/2 chiều cao của ảnh nền
-        original_ratio = product_image.width / product_image.height
+    def generate_prompt(self, item: dict) -> str:
+        prompt = f"Tạo một poster quảng cáo vô cùng cao cấp và sáng tạo để đăng tải lên mạng xã hội facebook hình vuông cho {item['itemName']} tuân thủ quy tắc không hiển thị hình ảnh sản phẩm trong poster quảng cáo vì lí do bảo mật. "
         
-        # Tính chiều cao mục tiêu (khoảng 1/2 chiều cao của bg)
-        target_height = int(bg_image.height * 0.5)
-        # Tính chiều rộng tương ứng để giữ nguyên tỷ lệ
-        target_width = int(target_height * original_ratio)
+        if 'description' in item and item['description']:
+            prompt += f" Ảnh quảng cáo nên có chủ đề biểu diễn cho {item['description']}."
+        if 'pattern' in item and item['pattern']:
+            prompt += f" Ảnh quảng cáo cần có các chi tiết như {item['pattern']}. Nếu {item['pattern']} rỗng hãy cho nó phong cách thật high end, elegant, luxury, minimalist"
+        return prompt
+
+    def generate_background_product(self, item: dict, model: str = "gemini-2.0-flash-exp-image-generation") -> ImageContext:
+        prompt = self.generate_prompt(item)
+        response_image = self.genai_client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=['TEXT', 'IMAGE']
+            )
+        )
+        for part in response_image.candidates[0].content.parts:
+            if part.inline_data is not None:
+                image = Image.open(io.BytesIO(part.inline_data.data))
+                return ImageContext(image=image)
+        raise ValueError("No image returned from GenAI")
+
+    def detect_text_in_image(self, image: Image.Image) -> tuple[np.ndarray, bool]:
+        """Detect text in a PIL Image and return a mask"""
+        # Convert PIL Image to numpy array for OCR
+        img_np = np.array(image)
+        if len(img_np.shape) == 3 and img_np.shape[2] == 4:  # RGBA
+            img_np = cv2.cvtColor(img_np, cv2.COLOR_RGBA2RGB)
         
-        # Kiểm tra nếu chiều rộng lớn hơn width của bg, điều chỉnh lại
-        if target_width > bg_image.width:
-            target_width = int(bg_image.width * 0.8)  # Giới hạn tối đa 80% chiều rộng bg
-            target_height = int(target_width / original_ratio)
-            
-        product_image = product_image.resize(
-            (target_width, target_height), 
-            Image.Resampling.LANCZOS
+        result = self.ocr.ocr(img_np, cls=True)
+        if result is None:
+            return np.zeros(img_np.shape[:2], dtype=np.uint8), False
+
+        mask = np.zeros(img_np.shape[:2], dtype=np.uint8)
+        text_detected = False
+        margin = 10
+
+        for line in result:
+            if line is None:
+                continue
+            for word_info in line:
+                text_detected = True
+                points = np.array(word_info[0], dtype=np.int32)
+                
+                x_min = max(0, np.min(points[:, 0]) - margin)
+                y_min = max(0, np.min(points[:, 1]) - margin)
+                x_max = min(img_np.shape[1], np.max(points[:, 0]) + margin)
+                y_max = min(img_np.shape[0], np.max(points[:, 1]) + margin)
+                
+                expanded_rect = np.array([
+                    [x_min, y_min],
+                    [x_max, y_min],
+                    [x_max, y_max],
+                    [x_min, y_max]
+                ], dtype=np.int32).reshape((-1, 1, 2))
+                
+                cv2.fillPoly(mask, [expanded_rect], color=255)
+                original_points = points.reshape((-1, 1, 2))
+                cv2.fillPoly(mask, [original_points], color=255)
+
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        
+        return mask, text_detected
+
+    def remove_text_from_image(self, image: Image.Image, mask: np.ndarray) -> Image.Image:
+        """Remove text from a PIL Image using a mask"""
+        # Convert PIL Image to numpy array
+        image_np = np.array(image)
+        if len(image_np.shape) == 3 and image_np.shape[2] == 4:  # RGBA
+            image_np = cv2.cvtColor(image_np, cv2.COLOR_RGBA2RGB)
+
+        if mask.shape[:2] != image_np.shape[:2]:
+            mask = cv2.resize(mask, (image_np.shape[1], image_np.shape[0]))
+
+        config = Config(
+            ldm_steps=20,
+            ldm_sampler=LDMSampler.ddim,
+            hd_strategy=HDStrategy.ORIGINAL,
+            hd_strategy_crop_margin=32,
+            hd_strategy_crop_trigger_size=2048,
+            hd_strategy_resize_limit=2048,
         )
 
-        if position == 'left':
-            pos = (0, (bg_image.height - product_image.height) // 2)
-        elif position == 'right':
-            pos = (bg_image.width - product_image.width, (bg_image.height - product_image.height) // 2)
-        elif position == 'center':
-            pos = ((bg_image.width - product_image.width) // 2, (bg_image.height - product_image.height) // 2)
-        elif position == 'top':
-            pos = ((bg_image.width - product_image.width) // 2, 0)
-        elif position == 'bottom':
-            pos = ((bg_image.width - product_image.width) // 2, bg_image.height - product_image.height)
-        else:
-            raise ValueError("Position must be one of ['left', 'right', 'center', 'top', 'bottom']")
+        result = self.lama_model(image_np, mask, config)
 
-        bg_image.paste(product_image, pos, product_image)
-        bg_image.save(output_path, "PNG")
-        return output_path
+        if result.dtype != np.uint8:
+            if np.max(result) <= 1.0:
+                result = (result * 255).astype(np.uint8)
+            else:
+                result = result.astype(np.uint8)
 
-    def add_multiple_products(self, background_path: str, product_paths: list, positions: list, output_path: str, scale_factors: list = None):
-        """Add multiple products to the background at different positions"""
-        if not product_paths:
-            raise ValueError("No product images provided")
+        # Convert back to PIL Image
+        return Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+
+    def process_text_in_image(self, image: Image.Image) -> Image.Image:
+        """Process and remove text from an image if needed"""
+        mask, text_detected = self.detect_text_in_image(image)
+        if text_detected:
+            return self.remove_text_from_image(image, mask)
+        return image
+
+    def add_products_to_image(self, background: Image.Image, products: list[Image.Image], positions: list[str]) -> Image.Image:
+        """Add multiple products to a background image"""
+        bg_image = background.copy()
         
-        if positions and len(positions) != len(product_paths):
-            raise ValueError("Number of positions must match number of products")
-        
-        if scale_factors and len(scale_factors) != len(product_paths):
-            raise ValueError("Number of scale factors must match number of products")
-        
-        # Use default scale factor if not provided
-        if not scale_factors:
-            scale_factors = [0.5] * len(product_paths)
-        
-        # Use default position (center) if not provided
-        if not positions:
-            positions = ['center'] * len(product_paths)
-        
-        # Load background
-        bg_image = Image.open(background_path).convert("RGBA")
-        
-        # Add each product
-        for i, product_path in enumerate(product_paths):
-            product_image = Image.open(product_path).convert("RGBA")
-            position = positions[i]
-            scale_factor = scale_factors[i]
+        for i, product_image in enumerate(products):
+            position = positions[i] if i < len(positions) else 'center'
             
-            # Resize product image theo background giữ nguyên tỷ lệ ảnh gốc
-            # Sản phẩm sẽ chiếm khoảng 1/2 chiều cao của ảnh nền
+            # Calculate target size
             original_ratio = product_image.width / product_image.height
-            
-            # Tính chiều cao mục tiêu (khoảng 1/2 chiều cao của bg)
             target_height = int(bg_image.height * 0.5)
-            # Tính chiều rộng tương ứng để giữ nguyên tỷ lệ
             target_width = int(target_height * original_ratio)
             
-            # Kiểm tra nếu chiều rộng lớn hơn width của bg, điều chỉnh lại
             if target_width > bg_image.width:
-                target_width = int(bg_image.width * 0.8)  # Giới hạn tối đa 80% chiều rộng bg
+                target_width = int(bg_image.width * 0.8)
                 target_height = int(target_width / original_ratio)
-                
+            
             product_image = product_image.resize(
-                (target_width, target_height), 
+                (target_width, target_height),
                 Image.Resampling.LANCZOS
             )
             
@@ -482,16 +409,14 @@ class AdGenerator:
                 pos_x = int(bg_image.width * 0.9) - product_image.width
                 pos_y = int(bg_image.height * 0.1)
             elif position == 'bottom-left':
-                pos_x = int(bg_image.width * 0.2)
+                pos_x = int(bg_image.width * 0.1)
                 pos_y = int(bg_image.height * 0.9) - product_image.height
             elif position == 'bottom-right':
                 pos_x = int(bg_image.width * 0.9) - product_image.width
                 pos_y = int(bg_image.height * 0.9) - product_image.height
             else:
-                raise ValueError("Position must be one of ['left', 'right', 'center', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']")
+                raise ValueError("Invalid position")
             
             bg_image.paste(product_image, (pos_x, pos_y), product_image)
         
-        # Save final image
-        bg_image.save(output_path, "PNG")
-        return output_path
+        return bg_image
