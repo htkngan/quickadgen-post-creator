@@ -11,6 +11,8 @@ import asyncio
 import time
 import tiktoken  # Add this import for token counting
 import os
+import uuid
+from datetime import datetime
 
 from Image_processing import ImageContext, AdGenerator
 from google.genai import types
@@ -26,6 +28,16 @@ load_dotenv()
 client_gemini = genai.Client()
 client_gpt = OpenAI()
 generator = AdGenerator()
+
+# Data models for ad generation
+class AdResponse(BaseModel):
+    id: str
+    created_at: str
+    image_data: str  # Base64 encoded image
+    metadata: dict  # Metadata about the ad
+
+# In-memory storage for generated ads
+ad_database = {}
 
 
 #gpt_model = os.getenv("gpt_model")
@@ -69,7 +81,7 @@ async def health_check():
 def count_tokens(text: str) -> int:
     """Count the number of tokens in a text string."""
     try:
-        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        encoding = tiktoken.encoding_for_model("gemnigemini-2.0-flash-exp-image-generation")
         return len(encoding.encode(text))
     except Exception as e:
         logger.error(f"Error counting tokens: {str(e)}")
@@ -195,94 +207,37 @@ async def generate_ad(item: Item):
         status_code=200
     )
     
+
 @app.post("/generate-image-service")
 async def generate_image_service(
-        itemCode: str = Form(...),
-        itemName: str = Form(...),
-        serviceHours: Optional[int] = Form(0),
-        description: Optional[str] = Form(None),
-        price: Optional[int] = Form(0),
-        image: Optional[UploadFile | str | None] = Form(None),
-        gen_image: Optional[bool] = Form(False),
-    ):
-    
+    itemCode: str = Form(...),
+    itemName: str = Form(...),
+    serviceHours: Optional[int] = Form(0),
+    description: Optional[str] = Form(None),
+    price: Optional[int] = Form(0),
+    image: Optional[UploadFile | str | None] = Form(None),
+    gen_image: Optional[bool] = Form(False),
+):
+    # Bước 1: Khởi tạo đối tượng Item
     item = Item(
         itemCode=itemCode,
         itemName=itemName,
-        serviceHours=serviceHours if serviceHours != 0 else None,
+        serviceHours=serviceHours or None,
         description=description,
-        price=price if price != 0 else None
+        price=price or None
     )
 
-    logger.info(f"Received request for product: {item.itemName} with gen_image={gen_image}")
-    
-    if gen_image and image is None:
-        raise HTTPException(status_code=400, detail="Image file is required when gen_image is True")
-    # Tạo nội dung quảng cáo
-    results = await asyncio.gather(
-        run_gemini(item)
-    )
-    
-    # Ghi log kết quả văn bản
+    # Bước 2: Sinh nội dung quảng cáo bằng GenAI
+    results = await asyncio.gather(run_gemini(item))
+
     for result in results:
         if result["status"] == "success":
             logger.info(f"{result['model']} completed in {result['time']:.3f} seconds")
         else:
             logger.error(f"{result['model']} failed: {result.get('error', 'Unknown error')}")
-    
-    # Nếu gen_image=True, kiểm tra ảnh đã được tải lên chưa
-    if gen_image:
-        if not image:
-            logger.warning("Image generation requested but no image uploaded")
-            return JSONResponse(
-                content={
-                    "status": "error",
-                    "message": "Image generation requested but no image uploaded",
-                    "results": results,
-                    "image": None
-                },
-                status_code=400
-            )
-            
-        logger.info("Processing image generation")
-        image_bytes = await image.read()
 
-        try:
-            # Tạo ảnh nền với nội dung quảng cáo và hình ảnh
-            image_context = generator.generate_clean_background(results[0]['ad_content'], image_bytes)            
-            
-            # Chuyển đổi thành base64 để trả về qua API
-            img_io = io.BytesIO()
-            image_context.image.save(img_io, format="PNG")
-            img_base64 = base64.b64encode(img_io.getvalue()).decode("utf-8")
-            
-            image_result = {
-                "status": "success",
-                "image_base64": img_base64
-            }
-            logger.info("Image generation successful")
-            
-        except Exception as e:
-            logger.error(f"Image generation failed: {str(e)}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            
-            image_result = {
-                "status": "failed",
-                "error": str(e)
-            }
-
-        return JSONResponse(
-            content={
-                "status": "success",
-                "results": results,
-                "image": image_result
-            },
-            status_code=200
-        )
-    else:
-        # Chỉ trả về kết quả văn bản quảng cáo
-        logger.info("Text-only ad generation requested")
+    # Nếu không cần tạo ảnh thì chỉ trả về kết quả văn bản
+    if not gen_image:
         return JSONResponse(
             content={
                 "status": "success",
@@ -291,6 +246,126 @@ async def generate_image_service(
             },
             status_code=200
         )
+
+    # Bước 3: Tạo ảnh quảng cáo nếu gen_image=True
+    try:
+        ad_content = results[0].get("ad_content", "")
+        image_bytes = await image.read() if image and hasattr(image, "read") else None
+
+        # Tạo ảnh nền với/không với ảnh template
+        image_context = generator.generate_background_service(item.itemName, ad_content, image_bytes)
+        image_context_no_text = generator.generate_clean_background(image_context)
+
+        # Chuyển đổi ảnh sang base64
+        format = "PNG"
+        if hasattr(image, "filename") and image.filename:
+            ext = image.filename.split(".")[-1].upper()
+            format = ext if ext in ["PNG", "JPEG", "JPG", "WEBP"] else "PNG"
+
+        img_io = io.BytesIO()
+        img_no_text_io = io.BytesIO()
+        image_context.image.save(img_io, format=format)
+        image_context_no_text.image.save(img_no_text_io, format=format)
+
+        image_result = {
+            "status": "success",
+            "image_base64": base64.b64encode(img_io.getvalue()).decode("utf-8"),
+            "image_no_text_base64": base64.b64encode(img_no_text_io.getvalue()).decode("utf-8")
+        }
+
+        logger.info("Image generation successful")
+
+    except Exception as e:
+        logger.error(f"Image generation failed: {str(e)}", exc_info=True)
+        image_result = {
+            "status": "failed",
+            "error": str(e)
+        }
+
+    return JSONResponse(
+        content={
+            "status": "success",
+            "results": results,
+            "image": image_result
+        },
+        status_code=200
+    )
+
+@app.post("/generate-product-ad", response_model=AdResponse)
+async def generate_product_ad(
+    item_name: str = Form(...),
+    pattern: str = Form("geometric"),
+    product_images: Optional[List[UploadFile]] = File(None),
+    positions: str = Form("center"),
+    description: Optional[str] = Form(None),
+):
+    """Generate an advertisement with multiple products"""
+    ad_id = str(uuid.uuid4())
+    timestamp = datetime.now().isoformat()
+    
+    product_info = {
+        "itemName": item_name,
+        "pattern": pattern,
+        "positions": [positions.strip()],  # chỉ truyền 1 vị trí, dạng list 1 phần tử
+    }
+    
+    metadata = {
+        "itemName": item_name,
+        "pattern": pattern,
+        "positions": [positions.strip()],  # chỉ truyền 1 vị trí, dạng list 1 phần tử
+    }
+    
+    if description:
+        product_info["description"] = description
+        metadata["description"] = description
+    
+    # Generate background
+    context = generator.generate_background_product(product_info)
+    background_image = context.image
+    
+    # Detect and remove text
+    mask, text_detected = generator.detect_text_in_image(background_image)
+    if text_detected:
+        background_image = generator.remove_text_from_image(background_image, mask)
+    
+    # Process product images if provided
+    if product_images and len(product_images) > 0:
+        position_list = [pos.strip() for pos in positions.split(",")]
+        if len(position_list) == 1 and len(product_images) > 1:
+            position_list = position_list * len(product_images)
+        
+        metadata["positions"] = position_list
+        metadata["productCount"] = len(product_images)
+        
+        # Convert uploaded files to PIL Images
+        product_pil_images = []
+        for product_image in product_images:
+            content = await product_image.read()
+            img = Image.open(io.BytesIO(content)).convert("RGBA")
+            product_pil_images.append(img)
+        
+        # Add products to background
+        background_image = generator.add_products_to_image(
+            background_image,
+            product_pil_images,
+            position_list
+        )
+    
+    # Convert final image to base64
+    buffered = io.BytesIO()
+    background_image.save(buffered, format="PNG")
+    image_data = base64.b64encode(buffered.getvalue()).decode()
+    
+    # Store ad information
+    ad_data = {
+        "id": ad_id,
+        "created_at": timestamp,
+        "image_data": image_data,
+        "metadata": metadata
+    }
+    
+    ad_database[ad_id] = ad_data
+    return ad_data
 
 # Example endpoint to retrieve item (for testing)
 @app.get("/items/{item_id}")
