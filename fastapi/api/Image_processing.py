@@ -279,6 +279,11 @@ class AdGenerator:
                 response_modalities=['TEXT', 'IMAGE']
             )
         )
+        
+        # You can also get usage metrics from the response if available
+        if hasattr(response_image, 'usage_metadata'):
+            print(f"Actual token usage: {response_image.usage_metadata}")
+            
         for part in response_image.candidates[0].content.parts:
             if part.inline_data is not None:
                 image = Image.open(io.BytesIO(part.inline_data.data))
