@@ -14,6 +14,7 @@ import tiktoken  # Add this import for token counting
 import os
 import uuid
 from datetime import datetime
+import uvicorn
 
 from Image_processing import ImageContext, AdGenerator
 from google.genai import types
@@ -390,7 +391,3 @@ def read_item(item_id: int, q: Union[str, None] = None):
 @app.put("/items/{item_id}")
 def update_item(item_id: int, item: Item):
     return {"item_name": item.itemName, "item_id": item_id}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=10000)
