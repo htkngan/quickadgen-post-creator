@@ -2,10 +2,8 @@ opencv-python
 matplotlib
 pillow
 numpy
-scikit-image
 paddlepaddle
 paddleocr
-scipy
 google
 google-genai
 python-dotenv
