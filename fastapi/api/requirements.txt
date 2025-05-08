@@ -2,7 +2,6 @@ opencv-python
 matplotlib
 pillow
 numpy==1.23.5
-scikit-image==0.19.3
 paddlepaddle
 paddleocr
 google
