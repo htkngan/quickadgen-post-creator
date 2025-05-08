@@ -19,7 +19,6 @@ tiktoken>=0.5.0
 pillow
 opencv-python
 torch
-tiktoken
 paddleocr
 lama-cleaner
 
