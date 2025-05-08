@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -46,13 +47,26 @@ gemni_model = "gemini-2.0-flash"
 app = FastAPI()
 
 # Update CORS middleware to be more permissive during development
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Allow all origins during development
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+#     expose_headers=["*"]
+# )
+
+origins = [
+    "https://quickadgen-post-creator-1pm7.vercel.app",
+    "http://localhost:3000"  # nếu bạn test local frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins during development
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"]
 )
 
 # Setup logging
@@ -379,4 +393,4 @@ def update_item(item_id: int, item: Item):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
