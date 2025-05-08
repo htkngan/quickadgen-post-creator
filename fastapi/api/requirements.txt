@@ -19,5 +19,6 @@ tiktoken>=0.5.0
 numpy
 opencv-python
 pillow
+paddlepaddle
 paddleocr
 lama_cleaner
