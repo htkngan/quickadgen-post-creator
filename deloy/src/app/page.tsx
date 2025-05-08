@@ -30,11 +30,9 @@ export default function Home() {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [results, setResults] = useState<any[]>([]);
-  const [imageResult, setImageResult] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageNoTextBase64, setImageNoTextBase64] = useState<string | null>(null);
   const [productAdImage, setProductAdImage] = useState<string | null>(null);
-  const [imageTokenCount, setImageTokenCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +42,6 @@ export default function Home() {
     setLoading(true);
     setError('');
     setResults([]);
-    setImageResult(null);
     setImageBase64(null);
     setImageNoTextBase64(null);
     setProductAdImage(null);
@@ -97,29 +94,19 @@ export default function Home() {
           setImageBase64(resData.image.image_base64 || null);
           setImageNoTextBase64(resData.image.image_no_text_base64 || null);
           setProductAdImage(null);
-          // Tính số token cho ảnh gốc
-          if (resData.image.image_base64) {
-            const base64Length = resData.image.image_base64.length;
-            setImageTokenCount(Math.ceil(base64Length / 4));
-          } else {
-            setImageTokenCount(null);
-          }
         } else if (resData.image_data) {
           setProductAdImage(resData.image_data);
           setImageBase64(null);
           setImageNoTextBase64(null);
-          setImageTokenCount(null);
         } else {
           setImageBase64(null);
           setImageNoTextBase64(null);
           setProductAdImage(null);
-          setImageTokenCount(null);
         }
       } else if (resData.image_data) {
         setProductAdImage(resData.image_data);
         setImageBase64(null);
         setImageNoTextBase64(null);
-        setImageTokenCount(null);
       } else {
         throw new Error(resData.message || 'No content generated');
       }
