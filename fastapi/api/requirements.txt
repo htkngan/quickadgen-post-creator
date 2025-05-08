@@ -22,3 +22,4 @@ python-multipart
 jinja2              
 sqlalchemy          
 pydantic
+tiktoken
