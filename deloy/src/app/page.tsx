@@ -2,6 +2,15 @@
 import { useState, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+interface AdResult {
+  model: string;
+  status: 'success' | 'error';
+  ad_content?: string;
+  error?: string;
+  time?: number;
+  total_tokens?: number;
+}
+
 const API_URL = 'https://quickadgen-post-creator-3.onrender.com';
 
 const checkAPIStatus = async () => {
@@ -29,7 +38,7 @@ export default function Home() {
     positions: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<AdResult[]>([]);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageNoTextBase64, setImageNoTextBase64] = useState<string | null>(null);
   const [productAdImage, setProductAdImage] = useState<string | null>(null);
