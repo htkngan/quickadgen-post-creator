@@ -5,6 +5,7 @@ numpy
 paddlepaddle
 paddleocr
 google
+openai
 google-genai
 python-dotenv
 lama_cleaner
