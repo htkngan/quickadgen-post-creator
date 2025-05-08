@@ -14,8 +14,7 @@ from dotenv import load_dotenv
 # Import các module xử lý riêng
 from paddleocr import PaddleOCR
 from lama_cleaner.model_manager import ModelManager
-from lama_cleaner.schema import Config, HDStrategy, LDMSampler
-
+from lama_cleaner.schema import Config, HDStrategy
 # Load env (nếu có API key cần thiết)
 load_dotenv()
 
@@ -243,7 +242,7 @@ class AdGenerator:
         img_array = np.array(image_context.image.convert('RGB'))
         config = Config(
             ldm_steps=20,
-            ldm_sampler=LDMSampler.ddim,
+            #ldm_sampler=LDMSampler.ddim,
             hd_strategy=HDStrategy.ORIGINAL,
             hd_strategy_crop_margin=32,
             hd_strategy_crop_trigger_size=2048,
@@ -345,7 +344,7 @@ class AdGenerator:
 
         config = Config(
             ldm_steps=20,
-            ldm_sampler=LDMSampler.ddim,
+            #ldm_sampler=LDMSampler.ddim,
             hd_strategy=HDStrategy.ORIGINAL,
             hd_strategy_crop_margin=32,
             hd_strategy_crop_trigger_size=2048,
