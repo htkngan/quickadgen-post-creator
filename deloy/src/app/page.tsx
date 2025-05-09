@@ -303,7 +303,7 @@ export default function Home() {
         </div>
          {/* Show sub-options only when a main option is selected */}
          {apiType && (
-            <div className="border rounded-lg p-6 bg-gray-50 text-left mt-4" ref={optionsContainerRef}>
+            <div className="border rounded-lg p-6 bg-gray-50 text-left mt-4" ref={subOptionsContainerRef}>
               <h4 className="font-medium text-gray-700 mb-3">Select generation type:</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
