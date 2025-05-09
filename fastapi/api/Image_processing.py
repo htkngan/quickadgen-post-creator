@@ -82,13 +82,25 @@ class ImageContext:
 
 class AdGenerator:
     def __init__(self):
-        # Khởi tạo các model cần thiết
-        self.ocr = PaddleOCR(use_angle_cls=True, lang='vi', show_log=False)
-        self.lama_model = ModelManager(
-            name="lama",
-            device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        # Lazy loading
+        self.ocr = None
+        self.lama_model = None
         self.genai_client = genai.Client()
+
+    def get_ocr(self):
+        if self.ocr is None:
+            from paddleocr import PaddleOCR
+            self.ocr = PaddleOCR(use_angle_cls=True, lang='vi', show_log=False)
+        return self.ocr
+
+    def get_lama_model(self):
+        if self.lama_model is None:
+            from lama_cleaner.model_manager import ModelManager
+            self.lama_model = ModelManager(
+                name="lama",
+                device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            )
+        return self.lama_model
     
     @staticmethod
     def clean_text(text):
