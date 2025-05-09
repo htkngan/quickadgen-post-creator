@@ -25,4 +25,3 @@ lama_cleaner
 diffusers==0.14.0 
 transformers==4.26.0 
 huggingface-hub==0.25.0
-distutils
