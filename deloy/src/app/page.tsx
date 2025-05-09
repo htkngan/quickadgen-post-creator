@@ -27,6 +27,8 @@ export default function Home() {
   const [apiType, setApiType] = useState<'generate-image-service' | 'generate-product-ad' | null>('generate-image-service');
   const [generationType, setGenerationType] = useState<'text-only' | 'with-image'>('with-image');
   const optionsContainerRef = useRef<HTMLDivElement>(null);
+  const subOptionsContainerRef = useRef<HTMLDivElement>(null);
+
 
   const [formData, setFormData] = useState({
     itemCode: 'DEFAULT_CODE',
@@ -42,11 +44,28 @@ export default function Home() {
   });
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
-      if (optionsContainerRef.current && !optionsContainerRef.current.contains(event.target as Node)) {
-        // Click was outside the options container, so deselect options
+      // Check if click was on a form element
+      const target = event.target as HTMLElement;
+      const isFormElement = target.closest('input') || 
+                            target.closest('textarea') || 
+                            target.closest('select') ||
+                            target.closest('button') ||
+                            target.closest('label');
+      
+      // If it's a form element, don't close the options
+      if (isFormElement) return;
+  
+      // If the click is outside both containers, close options
+      if (
+        optionsContainerRef.current && 
+        !optionsContainerRef.current.contains(event.target as Node) &&
+        subOptionsContainerRef.current && 
+        !subOptionsContainerRef.current.contains(event.target as Node)
+      ) {
         setApiType(null);
       }
     }
+    
     document.addEventListener('mousedown', handleOutsideClick);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
