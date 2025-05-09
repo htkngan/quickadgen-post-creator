@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 interface AdResult {
@@ -11,7 +11,7 @@ interface AdResult {
   total_tokens?: number;
 }
 
-const API_URL = 'https://quickadgen-post-creator-3.onrender.com';
+const API_URL = 'http://127.0.0.1:8000';
 
 const checkAPIStatus = async () => {
   try {
@@ -24,7 +24,10 @@ const checkAPIStatus = async () => {
 };
 
 export default function Home() {
-  const [apiType, setApiType] = useState<'generate-image-service' | 'generate-product-ad'>('generate-image-service');
+  const [apiType, setApiType] = useState<'generate-image-service' | 'generate-product-ad' | null>('generate-image-service');
+  const [generationType, setGenerationType] = useState<'text-only' | 'with-image'>('with-image');
+  const optionsContainerRef = useRef<HTMLDivElement>(null);
+
   const [formData, setFormData] = useState({
     itemCode: 'DEFAULT_CODE',
     itemName: '',
@@ -37,6 +40,18 @@ export default function Home() {
     pattern: '',
     positions: '',
   });
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (optionsContainerRef.current && !optionsContainerRef.current.contains(event.target as Node)) {
+        // Click was outside the options container, so deselect options
+        setApiType(null);
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [results, setResults] = useState<AdResult[]>([]);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -45,6 +60,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,49 +145,243 @@ export default function Home() {
 
   return (
     <>
-      <nav className="bg-white dark:bg-gray-900 fixed w-full border-b h-15 border-gray-200 dark:border-gray-600 flex flex-row justify-between">
-        <button className="mx-5" type="button" data-drawer-target="drawer-navigation" data-drawer-show="drawer-navigation" aria-controls="drawer-navigation">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
-        <div id="drawer-navigation" className="fixed top-0 left-0 z-40 w-64 h-screen p-4 overflow-y-auto transition-transform -translate-x-full bg-white dark:bg-gray-800" aria-labelledby="drawer-navigation-label">
-          V
-        </div>
-        <div>
-          <p className="text-right mt-3 px-5 text-2xl font-bold text-blue-800">
-              Facebook
+      {/* Navbar */}
+      <nav className="bg-white dark:bg-gray-900 fixed w-full border-b h-20 border-gray-200 dark:border-gray-600 flex flex-row justify-between">
+        <div className="flex flex-row w-full justify-end">
+          <div className="flex flex-row my-5 mx-5 gap-2">
+            <p className="text-white bg-blue-800 rounded-lg font-bold px-2 text-2xl text-center flex flex-row">
+              <svg className="w-7 h-7 fill-[#ffffff] pt-2" viewBox="0 0 576 512" xmlns="http://www.w3.org/2000/svg">
+                <path d="M234.7 42.7L197 56.8c-3 1.1-5 4-5 7.2s2 6.1 5 7.2l37.7 14.1L248.8 123c1.1 3 4 5 7.2 5s6.1-2 7.2-5l14.1-37.7L315 71.2c3-1.1 5-4 5-7.2s-2-6.1-5-7.2L277.3 42.7 263.2 5c-1.1-3-4-5-7.2-5s-6.1 2-7.2 5L234.7 42.7zM46.1 395.4c-18.7 18.7-18.7 49.1 0 67.9l34.6 34.6c18.7 18.7 49.1 18.7 67.9 0L529.9 116.5c18.7-18.7 18.7-49.1 0-67.9L495.3 14.1c-18.7-18.7-49.1-18.7-67.9 0L46.1 395.4zM484.6 82.6l-105 105-23.3-23.3 105-105 23.3 23.3zM7.5 117.2C3 118.9 0 123.2 0 128s3 9.1 7.5 10.8L64 160l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L128 160l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L128 96 106.8 39.5C105.1 35 100.8 32 96 32s-9.1 3-10.8 7.5L64 96 7.5 117.2zm352 256c-4.5 1.7-7.5 6-7.5 10.8s3 9.1 7.5 10.8L416 416l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L480 416l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L480 352l-21.2-56.5c-1.7-4.5-6-7.5-10.8-7.5s-9.1 3-10.8 7.5L416 352l-56.5 21.2z"></path>
+              </svg>
+              AI Post
             </p>
+            
+          </div>
         </div>
       </nav>
-      <div className=" body max-w-6xl mx-auto p-6">
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Left: Form */}
-            <div className="md:w-1/2 w-full">
-              <h1 className="text-2xl font-bold mb-6 text-center md:text-left">Ad Content Generator</h1>
-              <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
-                <div className="flex gap-4 mb-4">
-                  <label className="flex items-center gap-2">
+      {/* Sidebar */}
+      <div className="fixed top-0 left-0 h-full w-auto bg-white shadow-lg z-40 border-r border-gray-200">
+          <div className="p-4">
+            <img 
+              className="w-36 h-auto my-4" 
+              src="https://s2-static-app.s3.ap-southeast-1.amazonaws.com/BadoSite/home/LOGO.svg" 
+              alt="Bado Logo" 
+              loading="lazy" 
+            />
+          </div>
+          <div className="p-4">
+            <ul className="space-y-3">
+              <li className="p-2 hover:bg-blue-50 rounded-md transition-colors">
+                <a href="#" className="flex items-center text-gray-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  Dashboard
+                </a>
+              </li>
+              <li className="p-2 hover:bg-blue-50 rounded-md transition-colors">
+                <a href="#" className="flex items-center text-gray-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Analytics
+                </a>
+              </li>
+              <li className="p-2 hover:bg-blue-50 rounded-md transition-colors">
+                <a href="#" className="flex items-center text-gray-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  Projects
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      {/* Main Content */}
+      <div className="ml-64 pt-24 px-8 pb-8">
+        {/*Tilte*/}
+        <h1 className="text-2xl font-bold mb-6 text-center">AdGenius AI – Intelligent Content & Visual Creator for Smarter Advertising</h1>
+        {/*Select option*/}
+        <div className="mb-8 text-center" ref={optionsContainerRef}>
+          <h3 className="text-lg font-medium text-gray-700 mb-4">Select the type of content you want to create</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Generate Image Service */}
+            <div 
+              className={`border rounded-lg p-6 cursor-pointer transition-all ${
+                apiType === 'generate-image-service' 
+                  ? 'border-blue-500 bg-blue-50 shadow-md' 
+                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+              }`}
+              onClick={() => setApiType('generate-image-service')}
+            >
+              <div className="flex items-start">
+                <div className="bg-blue-100 rounded-lg p-2 mr-4">
+                  {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg> */}
+                  <img 
+                    src="https://www.svgrepo.com/show/530359/banana.svg" 
+                    className="h-6 w-6 text-blue-700" 
+                    alt="Image service icon"/>
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
                     <input
                       type="radio"
                       name="apiType"
                       value="generate-image-service"
                       checked={apiType === 'generate-image-service'}
                       onChange={() => setApiType('generate-image-service')}
+                      className="h-4 w-4 text-blue-600"
                     />
-                    Generate Image Service
-                  </label>
-                  <label className="flex items-center gap-2">
+                    <h4 className="font-semibold text-gray-800">Generate Image Service</h4>
+                  </div>
+                  <p className="text-gray-600 mt-2">
+                    Design impactful ads with AI-generated images for your services
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Generate Product Ad */}
+            <div 
+              className={`border rounded-lg p-6 cursor-pointer transition-all ${
+                apiType === 'generate-product-ad' 
+                  ? 'border-blue-500 bg-blue-50 shadow-md' 
+                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+              }`}
+              onClick={() => setApiType('generate-product-ad')}
+            >
+              <div className="flex items-start">
+                <div className="bg-green-100 rounded-lg p-2 mr-4">
+                <img 
+                  src="https://www.svgrepo.com/show/530353/grape.svg" 
+                  className="h-6 w-6 text-green-700" 
+                  alt="Product icon" 
+                />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
                     <input
                       type="radio"
                       name="apiType"
                       value="generate-product-ad"
                       checked={apiType === 'generate-product-ad'}
                       onChange={() => setApiType('generate-product-ad')}
+                      className="h-4 w-4 text-blue-600"
                     />
-                    Generate Product Ad
-                  </label>
+                    <h4 className="font-semibold text-gray-800">Generate Product Ad</h4>
+                  </div>
+                  <p className="text-gray-600 mt-2">
+                    Create professional product advertisements with customizable positioning
+                  </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+         {/* Show sub-options only when a main option is selected */}
+         {apiType && (
+            <div className="border rounded-lg p-6 bg-gray-50 text-left mt-4" ref={optionsContainerRef}>
+              <h4 className="font-medium text-gray-700 mb-3">Select generation type:</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Text Only Option */}
+                <div 
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    generationType === 'text-only' 
+                      ? 'border-blue-500 bg-blue-50 shadow-md' 
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+                  }`}
+                  onClick={() => setGenerationType('text-only')}
+                >
+                  <div className="flex items-center">
+                    <div className="bg-yellow-100 rounded-lg p-2 mr-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="generationType"
+                          value="text-only"
+                          checked={generationType === 'text-only'}
+                          onChange={() => setGenerationType('text-only')}
+                          className="h-4 w-4 text-blue-600"
+                        />
+                        <h5 className="font-medium text-gray-800">Text Only</h5>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Generate advertisement text content only (/generate-ad)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                               {/* With Image Option */}
+                               <div 
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    generationType === 'with-image' 
+                      ? 'border-blue-500 bg-blue-50 shadow-md' 
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+                  }`}
+                  onClick={() => setGenerationType('with-image')}
+                >
+                  <div className="flex items-center">
+                    <div className="bg-purple-100 rounded-lg p-2 mr-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="generationType"
+                          value="with-image"
+                          checked={generationType === 'with-image'}
+                          onChange={() => setGenerationType('with-image')}
+                          className="h-4 w-4 text-blue-600"
+                        />
+                        <h5 className="font-medium text-gray-800">Text & Image</h5>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {apiType === 'generate-image-service' ? 
+                          'Generate both text & image (/generate-image-service)' : 
+                          'Generate both text & image (/generate-product-ad)'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 text-right">
+                <button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                  onClick={() => {
+                    // Handle form submission based on selections
+                    const endpoint = generationType === 'text-only' 
+                      ? '/generate-ad'
+                      : apiType // This will be either 'generate-image-service' or 'generate-product-ad'
+                    
+                    console.log(`Submitting to endpoint: ${endpoint}`)
+                    // Proceed with form submission to the selected endpoint
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Left: Form */}
+            <div className="md:w-1/3 w-full">
+              <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
+                
                 <div>
                   <label className="block mb-2">Mã sản phẩm</label>
                   <input
