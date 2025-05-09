@@ -396,7 +396,7 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row gap-8">
+          <div className="pt-5 flex flex-col md:flex-row gap-8 justify-between">
             {/* Left: Form */}
             <div className="md:w-1/3 w-full">
               <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
@@ -595,7 +595,7 @@ export default function Home() {
                         <h2 className="text-xl font-bold">{result.model}</h2>
                         <div className="text-sm text-gray-600 space-x-4">
                           <span>Response Time: {result.time?.toFixed(2)}s</span>
-                          <span>Tokens: {result.total_tokens}</span>
+                          {/* <span>Tokens: {result.total_tokens}</span> */}
                         </div>
                       </div>
                       {result.status === 'success' ? (
@@ -619,7 +619,7 @@ export default function Home() {
             {imageBase64 && imageNoTextBase64 && (
               <div className="flex flex-col items-center">
                 <h2 className="text-2xl font-bold mb-4 text-center">Ảnh quảng cáo đã tạo</h2>
-                <div className="flex flex-col md:flex-row gap-8 justify-center">
+                <div className="flex flex-col md:flex-row gap-8">
                   <div className="flex flex-col items-center">
                     <span className="mb-2 text-lg font-medium">Ảnh gốc</span>
                     <img
