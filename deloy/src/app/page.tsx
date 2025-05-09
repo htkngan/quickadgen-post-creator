@@ -218,7 +218,7 @@ export default function Home() {
           </div>
         </div>
       {/* Main Content */}
-      <div className="ml-64 pt-24 px-8 pb-8">
+      <div className="ml-45 pt-24 px-8 pb-8">
         {/*Tilte*/}
         <h1 className="text-2xl font-bold mb-6 text-center">AdGenius AI – Intelligent Content & Visual Creator for Smarter Advertising</h1>
         {/*Select option*/}
@@ -293,7 +293,7 @@ export default function Home() {
                     />
                     <h4 className="font-semibold text-gray-800">Generate Product Ad</h4>
                   </div>
-                  <p className="text-gray-600 mt-2">
+                  <p className="text-gray-600 mt-2 text-left">
                     Create professional product advertisements with customizable positioning
                   </p>
                 </div>
@@ -340,8 +340,8 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                               {/* With Image Option */}
-                               <div 
+                {/* With Image Option */}
+                <div 
                   className={`border rounded-lg p-4 cursor-pointer transition-all ${
                     generationType === 'with-image' 
                       ? 'border-blue-500 bg-blue-50 shadow-md' 
@@ -378,20 +378,6 @@ export default function Home() {
               </div>
               
               <div className="mt-4 text-right">
-                <button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                  onClick={() => {
-                    // Handle form submission based on selections
-                    const endpoint = generationType === 'text-only' 
-                      ? '/generate-ad'
-                      : apiType // This will be either 'generate-image-service' or 'generate-product-ad'
-                    
-                    console.log(`Submitting to endpoint: ${endpoint}`)
-                    // Proceed with form submission to the selected endpoint
-                  }}
-                >
-                  Continue
-                </button>
               </div>
             </div>
           )}
@@ -585,17 +571,17 @@ export default function Home() {
               )}
             </div>
 
-            {/* Right: Text Results */}
-            <div className="md:w-1/2 w-full">
+          {/* Right: Results (Text and Images) */}
+            <div className="md:w-1/2 w-full flex flex-col gap-6">
+              {/* Text Results */}
               {results.length > 0 && (
-                <div className="w-full mt-0 flex flex-col gap-4">
+                <div className="w-full flex flex-col gap-4">
                   {results.map((result, index) => (
                     <div key={index} className="p-4 border rounded bg-white shadow">
                       <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold">{result.model}</h2>
                         <div className="text-sm text-gray-600 space-x-4">
                           <span>Response Time: {result.time?.toFixed(2)}s</span>
-                          {/* <span>Tokens: {result.total_tokens}</span> */}
                         </div>
                       </div>
                       {result.status === 'success' ? (
@@ -611,54 +597,51 @@ export default function Home() {
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Bottom: Generated Images */}
-          <div className="mt-8 w-full">
-            {imageBase64 && imageNoTextBase64 && (
-              <div className="flex flex-col items-center">
-                <h2 className="text-2xl font-bold mb-4 text-center">Ảnh quảng cáo đã tạo</h2>
-                <div className="flex flex-col md:flex-row gap-8">
-                  <div className="flex flex-col items-center">
-                    <span className="mb-2 text-lg font-medium">Ảnh gốc</span>
+              
+              {/* Generated Images */}
+              {(imageBase64 || imageNoTextBase64 || productAdImage) && (
+                <div className="mt-4 border p-4 rounded bg-white shadow">
+                  <h2 className="text-xl font-bold mb-4">Ảnh quảng cáo</h2>
+                  
+                  {imageBase64 && imageNoTextBase64 && (
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <h3 className="text-lg font-medium mb-2">Ảnh gốc</h3>
+                        <img
+                          src={`data:image/png;base64,${imageBase64}`}
+                          alt="Generated Ad"
+                          className="max-w-full border rounded-lg shadow-sm"
+                        />
+                      </div>
+                      <div className="mt-4">
+                        <h3 className="text-lg font-medium mb-2">Ảnh đã xoá chữ</h3>
+                        <img
+                          src={`data:image/png;base64,${imageNoTextBase64}`}
+                          alt="No Text Ad"
+                          className="max-w-full border rounded-lg shadow-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {imageBase64 && !imageNoTextBase64 && (
                     <img
                       src={`data:image/png;base64,${imageBase64}`}
                       alt="Generated Ad"
-                      className="max-w-md border rounded-lg shadow-lg"
+                      className="max-w-full border rounded-lg shadow-sm"
                     />
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="mb-2 text-lg font-medium">Ảnh đã xoá chữ</span>
+                  )}
+                  
+                  {productAdImage && (
                     <img
-                      src={`data:image/png;base64,${imageNoTextBase64}`}
-                      alt="No Text Ad"
-                      className="max-w-md border rounded-lg shadow-lg"
+                      src={`data:image/png;base64,${productAdImage}`}
+                      alt="Generated Product Ad"
+                      className="max-w-full border rounded-lg shadow-sm"
                     />
-                  </div>
+                  )}
                 </div>
-              </div>
-            )}
-            {imageBase64 && !imageNoTextBase64 && (
-              <div className="flex flex-col items-center">
-                <h2 className="text-2xl font-bold mb-4 text-center">Ảnh quảng cáo đã tạo</h2>
-                <img
-                  src={`data:image/png;base64,${imageBase64}`}
-                  alt="Generated Ad"
-                  className="max-w-md border rounded-lg shadow-lg"
-                />
-              </div>
-            )}
-            {productAdImage && (
-              <div className="flex flex-col items-center">
-                <h2 className="text-2xl font-bold mb-4 text-center">Ảnh quảng cáo đã tạo</h2>
-                <img
-                  src={`data:image/png;base64,${productAdImage}`}
-                  alt="Generated Product Ad"
-                  className="max-w-md border rounded-lg shadow-lg"
-                />
-              </div>
-            )}
+              )}
+            </div>
           </div>
       </div>
 
