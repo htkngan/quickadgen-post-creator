@@ -7,7 +7,7 @@ interface AdRequest {
 }
 
 export async function generateAd(data: AdRequest) {
-  const response = await fetch('https://quickadgen-post-creator-3.onrender.com/generate-ad', {
+  const response = await fetch('https://huynhngan-adgenius-ai.hf.space', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
