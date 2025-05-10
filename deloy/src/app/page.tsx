@@ -11,7 +11,7 @@ interface AdResult {
   total_tokens?: number;
 }
 
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'https://huynhngan-adgenius-ai.hf.space';
 
 const checkAPIStatus = async () => {
   try {
