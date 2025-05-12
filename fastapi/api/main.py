@@ -10,7 +10,7 @@ import logging
 from openai import OpenAI
 import asyncio
 import time
-import tiktoken  # Add this import for token counting
+# import tiktoken  # Add this import for token counting
 import os
 import uuid
 from datetime import datetime
@@ -93,14 +93,14 @@ async def health_check():
     return {"status": "ok"}
 
 #Set up two LLM clients
-def count_tokens(text: str) -> int:
-    """Count the number of tokens in a text string."""
-    try:
-        encoding = tiktoken.encoding_for_model("gemnigemini-2.0-flash-exp-image-generation")
-        return len(encoding.encode(text))
-    except Exception as e:
-        logger.error(f"Error counting tokens: {str(e)}")
-        return 0
+# def count_tokens(text: str) -> int:
+#     """Count the number of tokens in a text string."""
+#     try:
+#         encoding = tiktoken.encoding_for_model("gemnigemini-2.0-flash-exp-image-generation")
+#         return len(encoding.encode(text))
+#     except Exception as e:
+#         logger.error(f"Error counting tokens: {str(e)}")
+#         return 0
 
 async def run_gemini(item: Item):
     start_time = time.time()
@@ -124,7 +124,7 @@ async def run_gemini(item: Item):
             return {"model": gemni_model, "status": "error", "ad_content": None, "time": 0, "error": "Invalid response format"}
         
         formatted_text = response.text.strip()
-        token_count = count_tokens(formatted_text)
+        # token_count = count_tokens(formatted_text)
         end_time = time.time()
         logger.info(f"Successfully generated Gemini content of length: {len(formatted_text)}")
         logger.info(f"Gemini response text: {formatted_text}")
@@ -133,7 +133,7 @@ async def run_gemini(item: Item):
             "model": gemni_model,
             "status": "success",
             "ad_content": formatted_text,
-            "total_tokens": token_count,
+            # "total_tokens": token_count,
             "time": end_time - start_time
         }
     
@@ -170,7 +170,7 @@ async def run_gpt(item: Item, gpt_model: str):
             return {"model": gpt_model, "status": "error", "ad_content": None, "time": 0, "error": "Invalid response format"}
         
         formatted_text = response.choices[0].message.content.strip()
-        token_count = count_tokens(formatted_text)
+        # token_count = count_tokens(formatted_text)
         end_time = time.time()
         logger.info(f"Successfully generated GPT content of length: {len(formatted_text)}")
         logger.info(f"GPT response text: {formatted_text}")
@@ -179,7 +179,7 @@ async def run_gpt(item: Item, gpt_model: str):
             "model": gpt_model,
             "status": "success",
             "ad_content": formatted_text,
-            "total_tokens": token_count,
+            # "total_tokens": token_count,
             "time": end_time - start_time
         }
     

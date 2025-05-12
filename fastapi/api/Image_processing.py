@@ -8,7 +8,7 @@ from google.genai import types
 import cv2
 import numpy as np
 import torch
-import tiktoken
+# import tiktoken
 from dotenv import load_dotenv
 
 # Import các module xử lý riêng
@@ -82,11 +82,13 @@ class ImageContext:
 
 class AdGenerator:
     def __init__(self):
+        # Khởi tạo các model cần thiết
         self.ocr = PaddleOCR(use_angle_cls=True, lang='vi', show_log=False)
         self.lama_model = ModelManager(
             name="lama",
             device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
+        self.genai_client = genai.Client()
     
     @staticmethod
     def clean_text(text):
@@ -120,19 +122,18 @@ class AdGenerator:
 
         return text.strip()
     
-    #Set up two LLM clients
-    def count_tokens(self, text: str, has_image: bool = False) -> int:
-        """Count the number of tokens in a text string and optional image."""
-        try:
-            encoding = tiktoken.encoding_for_model("gemini-2.0-flash-exp-image-generation")
-            text_tokens = len(encoding.encode(text))
-            # Based on Gemini documentation, images typically use ~258 tokens
-            image_tokens = 258 if has_image else 0
-            return text_tokens + image_tokens
-        except Exception as e:
-            print(f"Token counting error: {e}")
-            # Return an estimate if encoding fails
-            return len(text.split()) + (258 if has_image else 0)
+    # def count_tokens(self, text: str, has_image: bool = False) -> int:
+    #     """Count the number of tokens in a text string and optional image."""
+    #     try:
+    #         encoding = tiktoken.encoding_for_model("gemini-2.0-flash-exp-image-generation")
+    #         text_tokens = len(encoding.encode(text))
+    #         # Based on Gemini documentation, images typically use ~258 tokens
+    #         image_tokens = 258 if has_image else 0
+    #         return text_tokens + image_tokens
+    #     except Exception as e:
+    #         print(f"Token counting error: {e}")
+    #         # Return an estimate if encoding fails
+    #         return len(text.split()) + (258 if has_image else 0)
 
     def generate_background_service(self, itemName: str, ads_text: str, image_bytes: bytes | None, model: str = "gemini-2.0-flash-exp-image-generation") -> ImageContext:
         if image_bytes:
@@ -143,8 +144,8 @@ class AdGenerator:
                 'style photographic, modern, impressive, creative.'
             )
             # Calculate tokens before API call
-            token_count = self.count_tokens(prompt, has_image=True)
-            print(f"Token count for request with image: {token_count}")
+            # token_count = self.count_tokens(prompt, has_image=True)
+            # print(f"Token count for request with image: {token_count}")
             
             response_image = self.genai_client.models.generate_content(
             model=model,
@@ -155,8 +156,8 @@ class AdGenerator:
             )
             
             # You can also get usage metrics from the response if available
-            if hasattr(response_image, 'usage_metadata'):
-                print(f"Actual token usage: {response_image.usage_metadata}")
+            # if hasattr(response_image, 'usage_metadata'):
+            #     print(f"Actual token usage: {response_image.usage_metadata}")
                 
             for part in response_image.candidates[0].content.parts:
                 if part.inline_data is not None:
@@ -170,8 +171,8 @@ class AdGenerator:
                 'style photographic, modern, impressive, creative.'
             )
             # Calculate tokens for text-only prompt
-            token_count = self.count_tokens(prompt)
-            print(f"Token count for text-only request: {token_count}")
+            # token_count = self.count_tokens(prompt)
+            # print(f"Token count for text-only request: {token_count}")
             
             response_image = self.genai_client.models.generate_content(
             model=model,
@@ -182,8 +183,8 @@ class AdGenerator:
             )
             
             # Track usage metrics if available
-            if hasattr(response_image, 'usage_metadata'):
-                print(f"Actual token usage: {response_image.usage_metadata}")
+            # if hasattr(response_image, 'usage_metadata'):
+            #     print(f"Actual token usage: {response_image.usage_metadata}")
                 
             for part in response_image.candidates[0].content.parts:
                 if part.inline_data is not None:
@@ -278,8 +279,8 @@ class AdGenerator:
         )
         
         # You can also get usage metrics from the response if available
-        if hasattr(response_image, 'usage_metadata'):
-            print(f"Actual token usage: {response_image.usage_metadata}")
+        # if hasattr(response_image, 'usage_metadata'):
+        #     print(f"Actual token usage: {response_image.usage_metadata}")
             
         for part in response_image.candidates[0].content.parts:
             if part.inline_data is not None:
