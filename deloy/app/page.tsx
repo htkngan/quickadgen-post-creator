@@ -127,7 +127,12 @@ export default function Home() {
         ) : (
           <div className="w-full h-[calc(100vh-64px)] bg-gradient-to-b from-gray-900 to-blue-900">
             {generatedContent && (
-              <AdPreview generatedContent={generatedContent} setGeneratedContent={setGeneratedContent} />
+              <AdPreview
+                generatedContent={generatedContent}
+                setGeneratedContent={setGeneratedContent}
+                apiKey={apiKey}
+                apiUrl={apiUrl}
+              />
             )}
           </div>
         )}

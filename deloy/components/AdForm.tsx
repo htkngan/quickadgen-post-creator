@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { ImageIcon, MessageSquare, ShoppingBag, Briefcase, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { generateAd, generateProductAd, generateImageService } from "@/lib/api"
 
 interface AdFormProps {
   onGenerateContent: (content: any) => void
@@ -80,51 +81,32 @@ export default function AdForm({ onGenerateContent, setIsLoading, apiKey, apiUrl
       data.append("description", formData.description || "")
       data.append("price", formData.price)
 
-      let endpoint = ""
+      let apiCall: Promise<any> | null = null
 
       switch (activePanel) {
         case "text":
-          endpoint = `${apiUrl}/generate-ad`
+          apiCall = generateAd(data, apiUrl, apiKey)
           break
         case "product":
-          endpoint = `${apiUrl}/generate-product-ad`
           data.append("pattern", formData.pattern)
           data.append("positions", formData.positions)
           if (selectedFile) {
             data.append("product_images", selectedFile)
           }
+          apiCall = generateProductAd(data, apiUrl, apiKey)
           break
         case "service":
-          endpoint = `${apiUrl}/generate-image-service`
           data.append("gen_image", "true")
           if (selectedFile) {
             data.append("image", selectedFile)
           }
+          apiCall = generateImageService(data, apiUrl, apiKey)
           break
       }
 
-      // Add timeout to fetch request
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-
       try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "x-api-key": apiKey,
-          },
-          body: data,
-          signal: controller.signal,
-        })
-
-        clearTimeout(timeoutId)
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
-        }
-
-        const result = await response.json()
+        if (!apiCall) throw new Error("No API call available.")
+        const result = await apiCall
         onGenerateContent({
           type: activePanel,
           data: result,
@@ -132,9 +114,6 @@ export default function AdForm({ onGenerateContent, setIsLoading, apiKey, apiUrl
         })
       } catch (error) {
         if (error instanceof Error) {
-          if (error.name === "AbortError") {
-            throw new Error("Request timed out. The server took too long to respond.")
-          }
           throw error
         }
         throw new Error("An unknown error occurred")
