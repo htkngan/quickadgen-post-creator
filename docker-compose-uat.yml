@@ -1,0 +1,31 @@
+services:
+  bado-genai:
+    container_name: uat_bado_genai
+    image: bado_genai_uat:uat
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+        - API_KEYS=${API_KEYS}
+    restart: always
+    ports:
+      - "8000:8000"
+    networks:
+      - dockerapi-dev
+  
+  bado-genai-ui:
+    container_name: uat_bado_genai_ui
+    image: bado_genai_ui_uat:uat
+    build:
+      context: ./UI
+      dockerfile: Dockerfile-uat
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - dockerapi-dev
+
+networks:
+  dockerapi-dev:
+    driver: bridge
