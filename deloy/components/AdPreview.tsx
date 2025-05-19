@@ -114,7 +114,7 @@ export default function AdPreview({ generatedContent, setGeneratedContent, apiKe
         <div className="p-6 max-w-4xl mx-auto">
           <Card className="bg-white shadow-xl transform-gpu hover:scale-[1.01] transition-transform duration-300">
             <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-purple-800">Generated Facebook Ad</h2>
+              <h2 className="text-2xl font-bold mb-4 text-purple-800">Generated Ad</h2>
 
               {generatedContent?.type !== "text" && (
                 <div className="mb-6 rounded-lg overflow-hidden shadow-lg">
@@ -188,7 +188,7 @@ export default function AdPreview({ generatedContent, setGeneratedContent, apiKe
                         document.body.removeChild(link)
                         toast({
                           title: "Image downloaded!",
-                          description: "Your Facebook ad image has been downloaded.",
+                          description: "Your ad image has been downloaded.",
                         })
                       }
                     }}

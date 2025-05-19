@@ -399,7 +399,7 @@ export default function AdGeneratorScene({ onGenerateContent, setIsLoading }: Ad
                   onClick={handleGenerateAd}
                   className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
                 >
-                  Generate Facebook Ad
+                  Generate Ad
                 </Button>
               </div>
             </CardContent>
@@ -416,7 +416,7 @@ export default function AdGeneratorScene({ onGenerateContent, setIsLoading }: Ad
         anchorY="middle"
         font="/fonts/Geist_Bold.json"
       >
-        Facebook Ad Generator
+        Ad Generator
       </Text>
 
       {/* Floating 3D Icon */}

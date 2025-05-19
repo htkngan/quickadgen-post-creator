@@ -57,13 +57,15 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col perspective-1000">
-      <div className="flex justify-between items-center p-4 bg-gradient-to-r from-purple-600 to-blue-500 z-10">
-        <h1 className="text-2xl font-bold text-white">Facebook Ad Generator</h1>
+      <div className="flex justify-between items-center bg-gray-100 z-10 p-2">
+        <img src="https://s2-static-app.s3.ap-southeast-1.amazonaws.com/BadoSite/home/LOGO.svg"></img>
         <div className="flex space-x-2">
           <Button
             onClick={() => setActiveTab("generator")}
             className={`px-4 py-2 rounded-md ${
-              activeTab === "generator" ? "bg-white text-purple-600" : "bg-purple-700 text-white"
+              activeTab === "generator"
+                ? "bg-white text-black"
+                : "bg-white text-purple-600 hover:bg-black hover:text-white"
             }`}
           >
             Generator
@@ -92,7 +94,7 @@ export default function Home() {
 
       <div className="flex-1 relative">
         {activeTab === "generator" ? (
-          <div className="w-full h-[calc(100vh-64px)] bg-gradient-to-b from-purple-900 to-blue-900 flex items-center justify-center overflow-hidden">
+          <div className="w-full h-[calc(100vh-64px)] bg-gradient-to-b from-purple-900 to-blue-900 flex items-center justify-center overflow-hidden" style={{height: "800px"}}>
             {/* 3D Background Elements */}
             <div className="scene-3d">
               <div className="floating-cube cube-1"></div>

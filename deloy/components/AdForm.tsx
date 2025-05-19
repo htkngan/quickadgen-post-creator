@@ -155,7 +155,7 @@ export default function AdForm({ onGenerateContent, setIsLoading, apiKey, apiUrl
     <Card className="w-[600px] max-w-[90vw] bg-white/90 backdrop-blur-md shadow-xl z-10 transform-gpu rotate-y-5 hover:rotate-y-0 transition-transform duration-500">
       <CardContent className="p-6">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-purple-800">Create Facebook Ads</h2>
+          <h2 className="text-2xl font-bold text-purple-800">Create Ads</h2>
           <p className="text-gray-600">Generate engaging ads with AI</p>
         </div>
 
@@ -411,7 +411,7 @@ export default function AdForm({ onGenerateContent, setIsLoading, apiKey, apiUrl
             onClick={handleGenerateAd}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 transform-gpu hover:scale-105 transition-all duration-300"
           >
-            Generate Facebook Ad
+            Generate Ad
           </Button>
         </div>
       </CardContent>

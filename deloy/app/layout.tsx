@@ -3,8 +3,8 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata = {
-  title: "Facebook Ad Generator",
-  description: "Create engaging Facebook ads with AI",
+  title: "Ad Generator",
+  description: "Create engaging ads with AI",
     generator: 'v0.dev'
 }
 
