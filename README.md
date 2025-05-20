@@ -127,5 +127,5 @@ Use Bun:
     # NEXT_PUBLIC_API_URL="http://localhost:8000"
     # NEXT_PUBLIC_BACKEND_API_KEY="your_secret_key_for_frontend_to_use" # Must be one of the VALID_API_KEYS in backend's .env
 
-   bun run dev\bun run build + bun start
+   bun run dev\bun next build + bun start
   ```
