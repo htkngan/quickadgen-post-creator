@@ -7,7 +7,7 @@ Tired of the endless cycle of designing promotional posters? **QuickAdGen** is y
 ## ⚡️ Live Demo (Frontend)
 
 Experience QuickAdGen in action:
-**[➡️ Click Here to Try QuickAdGen!](https://quickadgen-post-creator-mst7-4qaq75e4a-htkngans-projects.vercel.app/)**
+**[➡️ Click Here to Try QuickAdGen!](https://quickadgen-post-creator-1pm7.vercel.app/)**
 
 Here's a glimpse of the main QuickAdGen interface where you'll define your poster requirements:
 
